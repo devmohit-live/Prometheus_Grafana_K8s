@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+spec:
+  selector:
+    env: deploy
+  type: NodePort
+  ports:
+    - port: 9090
+      targetPort: 9090
+      nodePort: 30008
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+    name: prometheus-pvc
+spec:
+    accessModes:
+    - ReadWriteMany
+    resources:
+        requests:
+            storage: 2Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: prometheus
+    labels:
+      env: deploy 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+       env: deploy
+  template:
+    metadata:
+     name: prometheus-pod
+     labels:
+       env: deploy
+    spec: 
+      containers:
+        - name: promnode
+          image: devmohitlive/prometheus
+          volumeMounts:
+            - name: logs
+              mountPath: /promdir
+          volumeMounts:
+            - name: nodes
+              mountPath: /promdir/prometheus.yml
+              subPath: prometheus.yml
+      volumes:
+      - name: logs
+        persistentVolumeClaim:
+            claimName: prometheus-pvc
+      - name: nodes
+        configMap:
+            name: prometheus-nodes
+            defaultMode: 0744	
